@@ -175,32 +175,33 @@ class INFOGAN():
             #  Train Discriminator
             # ---------------------
 
-            # Select a random half batch of images
-            idx = np.random.randint(0, X_train.shape[0], batch_size)
-            imgs = X_train[idx]
+            for replay in range(5):
+                # Select a random half batch of images
+                idx = np.random.randint(0, X_train.shape[0], batch_size)
+                imgs = X_train[idx]
 
-            # Sample noise and categorical labels
-            sampled_noise, sampled_labels = self.sample_generator_input(batch_size)
-            gen_input = np.concatenate((sampled_noise, sampled_labels), axis=1)
+                # Sample noise and categorical labels
+                sampled_noise, sampled_labels = self.sample_generator_input(batch_size)
+                gen_input = np.concatenate((sampled_noise, sampled_labels), axis=1)
 
-            # Generate a half batch of new images
-            gen_imgs = self.generator.predict(gen_input)
-            #self.save_samples("real", np.array(imgs))
-            #self.save_samples("fake", gen_imgs)
-            #exit()
+                # Generate a half batch of new images
+                gen_imgs = self.generator.predict(gen_input)
+                #self.save_samples("real", np.array(imgs))
+                #self.save_samples("fake", gen_imgs)
+                #exit()
 
-            # Train on real and generated data
-            d_loss_real = self.discriminator.train_on_batch(imgs, valid)
-            d_loss_fake = self.discriminator.train_on_batch(gen_imgs, fake)
+                # Train on real and generated data
+                d_loss_real = self.discriminator.train_on_batch(imgs, valid)
+                d_loss_fake = self.discriminator.train_on_batch(gen_imgs, fake)
 
-            # Avg. loss
-            d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
+                # Avg. loss
+                d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
 
-            # ---------------------
-            #  Train Generator and Q-network
-            # ---------------------
-
-            g_loss = self.combined.train_on_batch(gen_input, [valid, sampled_labels])
+                if (replay==4):
+                # ---------------------
+                #  Train Generator and Q-network
+                # ---------------------
+                    g_loss = self.combined.train_on_batch(gen_input, [valid, sampled_labels])
 
             # Plot the progress
             print ("%d [D loss: %.2f, acc.: %.2f%%] [Q loss: %.2f] [G loss: %.2f]" % (epoch, d_loss[0], 100*d_loss[1], g_loss[1], g_loss[2]))
