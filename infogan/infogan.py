@@ -1,4 +1,6 @@
 from __future__ import print_function, division
+import warnings
+warnings.filterwarnings("ignore")
 
 from keras.datasets import mnist
 from keras.layers import Input, Dense, Reshape, Flatten, Dropout, multiply, concatenate
@@ -13,15 +15,18 @@ import keras.backend as K
 import matplotlib.pyplot as plt
 
 import numpy as np
+import sys
+sys.path.append('../unity')
+from unity import semantic_maps, semantic_maps_shape
 
 class INFOGAN():
-    def __init__(self):
-        self.img_rows = 28
-        self.img_cols = 28
-        self.channels = 1
-        self.num_classes = 10
+    def __init__(self, image_size, channels, num_classes):
+        self.img_rows = image_size
+        self.img_cols = image_size
+        self.channels = channels
+        self.num_classes = num_classes
         self.img_shape = (self.img_rows, self.img_cols, self.channels)
-        self.latent_dim = 72
+        self.latent_dim = 62 + num_classes
 
 
         optimizer = Adam(0.0002, 0.5)
@@ -65,8 +70,10 @@ class INFOGAN():
 
         model = Sequential()
 
-        model.add(Dense(128 * 7 * 7, activation="relu", input_dim=self.latent_dim))
-        model.add(Reshape((7, 7, 128)))
+        mutiplier = int(self.img_cols / 4)
+
+        model.add(Dense(128 * mutiplier * mutiplier, activation="relu", input_dim=self.latent_dim))
+        model.add(Reshape((mutiplier, mutiplier, 128)))
         model.add(BatchNormalization(momentum=0.8))
         model.add(UpSampling2D())
         model.add(Conv2D(128, kernel_size=3, padding="same"))
@@ -118,7 +125,7 @@ class INFOGAN():
 
         # Recognition
         q_net = Dense(128, activation='relu')(img_embedding)
-        label = Dense(self.num_classes, activation='softmax')(q_net)
+        label = Dense(self.num_classes, activation='sigmoid')(q_net)
 
         # Return discriminator and recognition network
         return Model(img, validity), Model(img, label)
@@ -135,21 +142,28 @@ class INFOGAN():
     def sample_generator_input(self, batch_size):
         # Generator inputs
         sampled_noise = np.random.normal(0, 1, (batch_size, 62))
-        sampled_labels = np.random.randint(0, self.num_classes, batch_size).reshape(-1, 1)
-        sampled_labels = to_categorical(sampled_labels, num_classes=self.num_classes)
-
+        sampled_labels = np.random.randint(2, size=(batch_size, self.num_classes))
         return sampled_noise, sampled_labels
 
     def train(self, epochs, batch_size=128, sample_interval=50):
 
         # Load the dataset
-        (X_train, y_train), (_, _) = mnist.load_data()
+        (X_train_m, y_train_m), (_, _) = mnist.load_data()
+        (X_train, y_train), (_, _) = semantic_maps(resize=self.img_cols)
 
+        #print("mints:", y_train_m[0])
+        #print("domz:", y_train[0])
+        #exit()
+        
         # Rescale -1 to 1
         X_train = (X_train.astype(np.float32) - 127.5) / 127.5
-        X_train = np.expand_dims(X_train, axis=3)
-        y_train = y_train.reshape(-1, 1)
-
+        X_train_m = (X_train_m.astype(np.float32) - 127.5) / 127.5
+        
+        if len(X_train_m.shape)==3:     # images have no channels
+                X_train_m = np.expand_dims(X_train_m, axis=3)
+        #y_train = y_train.reshape(-1, 1)
+        #print(y_train[0])
+        #exit()
         # Adversarial ground truths
         valid = np.ones((batch_size, 1))
         fake = np.zeros((batch_size, 1))
@@ -197,12 +211,16 @@ class INFOGAN():
         fig, axs = plt.subplots(r, c)
         for i in range(c):
             sampled_noise, _ = self.sample_generator_input(c)
-            label = to_categorical(np.full(fill_value=i, shape=(r,1)), num_classes=self.num_classes)
+            #label = to_categorical(np.full(fill_value=i, shape=(r,1)), num_classes=self.num_classes)
+            label = np.random.randint(2, size=(c, self.num_classes))
             gen_input = np.concatenate((sampled_noise, label), axis=1)
             gen_imgs = self.generator.predict(gen_input)
             gen_imgs = 0.5 * gen_imgs + 0.5
             for j in range(r):
-                axs[j,i].imshow(gen_imgs[j,:,:,0], cmap='gray')
+                if (self.channels==1):
+                    axs[j,i].imshow(gen_imgs[j,:,:,0], cmap='gray')
+                else:
+                    axs[j, i].imshow(gen_imgs[j, :, :, 0])
                 axs[j,i].axis('off')
         fig.savefig("images/%d.png" % epoch)
         plt.close()
@@ -223,5 +241,6 @@ class INFOGAN():
 
 
 if __name__ == '__main__':
-    infogan = INFOGAN()
+    image_size, channels, classes = semantic_maps_shape()
+    infogan = INFOGAN(image_size, channels, classes)
     infogan.train(epochs=50000, batch_size=128, sample_interval=50)
