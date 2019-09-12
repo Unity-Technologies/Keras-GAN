@@ -175,7 +175,7 @@ class INFOGAN():
             #  Train Discriminator
             # ---------------------
 
-            for replay in range(5):
+            for replay in range(2):
                 # Select a random half batch of images
                 idx = np.random.randint(0, X_train.shape[0], batch_size)
                 imgs = X_train[idx]
@@ -197,7 +197,7 @@ class INFOGAN():
                 # Avg. loss
                 d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
 
-                if (replay==4):
+                if (replay==1):
                 # ---------------------
                 #  Train Generator and Q-network
                 # ---------------------
