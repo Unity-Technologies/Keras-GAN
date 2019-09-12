@@ -179,7 +179,7 @@ class INFOGAN():
                 # Select a random half batch of images
                 idx = np.random.randint(0, X_train.shape[0], batch_size)
                 imgs = X_train[idx]
-
+                
                 # Sample noise and categorical labels
                 sampled_noise, sampled_labels = self.sample_generator_input(batch_size)
                 gen_input = np.concatenate((sampled_noise, sampled_labels), axis=1)
@@ -220,6 +220,7 @@ class INFOGAN():
             gen_input = np.concatenate((sampled_noise, label), axis=1)
             gen_imgs = self.generator.predict(gen_input)
             self.save_samples("generated_" + str(i), gen_imgs)
+
             #gen_imgs = 0.5 * gen_imgs + 0.5
             #for j in range(r):
             #    formatted = (gen_imgs[j,:,:] * 255 / np.max(gen_imgs[j,:,:])).astype('uint8')
