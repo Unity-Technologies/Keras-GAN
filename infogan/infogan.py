@@ -185,6 +185,9 @@ class INFOGAN():
 
             # Generate a half batch of new images
             gen_imgs = self.generator.predict(gen_input)
+            #self.save_samples("real", np.array(imgs))
+            #self.save_samples("fake", gen_imgs)
+            #exit()
 
             # Train on real and generated data
             d_loss_real = self.discriminator.train_on_batch(imgs, valid)
@@ -208,26 +211,34 @@ class INFOGAN():
 
     def sample_images(self, epoch):
         r, c = 10, 10
-
-        fig, axs = plt.subplots(r, c)
+        #fig, axs = plt.subplots(r, c)
         for i in range(c):
             sampled_noise, _ = self.sample_generator_input(c)
             #label = to_categorical(np.full(fill_value=i, shape=(r,1)), num_classes=self.num_classes)
             label = np.random.randint(2, size=(c, self.num_classes))
             gen_input = np.concatenate((sampled_noise, label), axis=1)
             gen_imgs = self.generator.predict(gen_input)
-            gen_imgs = 0.5 * gen_imgs + 0.5
-            for j in range(r):
-                formatted = (gen_imgs[j,:,:] * 255 / np.max(gen_imgs[j,:,:])).astype('uint8')
-                im = Image.fromarray(formatted)
-                im.save("images/_" + str(j) + "%d.png" % epoch)
-                if (self.channels==1):
-                    axs[j,i].imshow(gen_imgs[j,:,:], cmap='gray')
-                else:
-                    axs[j, i].imshow(gen_imgs[j, :, :])
-                axs[j,i].axis('off')
-        fig.savefig("images/%d.png" % epoch)
-        plt.close()
+            self.save_samples("generated_" + str(i), gen_imgs)
+            #gen_imgs = 0.5 * gen_imgs + 0.5
+            #for j in range(r):
+            #    formatted = (gen_imgs[j,:,:] * 255 / np.max(gen_imgs[j,:,:])).astype('uint8')
+            #    im = Image.fromarray(formatted)
+            #    im.save("images/_" + str(j) + "%d.png" % epoch)
+            #    if (self.channels==1):
+            #        axs[j,i].imshow(gen_imgs[j,:,:], cmap='gray')
+            #    else:
+            #        axs[j, i].imshow(gen_imgs[j, :, :])
+            #    axs[j,i].axis('off')
+        #fig.savefig("images/%d.png" % epoch)
+        #plt.close()
+
+    def save_samples(self, name, images):
+        a = 0
+        for i in images:
+            formatted = (i * 255 / np.max(i)).astype('uint8')
+            im = Image.fromarray(formatted)
+            im.save("images/" + name + "_" + str(a) + ".png")
+            a = a + 1
 
     def save_model(self):
 
@@ -247,4 +258,4 @@ class INFOGAN():
 if __name__ == '__main__':
     image_size, channels, classes = semantic_maps_shape()
     infogan = INFOGAN(image_size, channels, classes)
-    infogan.train(epochs=50000, batch_size=128, sample_interval=50)
+    infogan.train(epochs=50000, batch_size=32, sample_interval=50)
