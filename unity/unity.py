@@ -45,4 +45,4 @@ def get_number_of_unique_classes():
 	return unique_labels
 
 def semantic_maps_shape():
-	return 64, 3, get_number_of_unique_classes()
+	return 256, 3, get_number_of_unique_classes()

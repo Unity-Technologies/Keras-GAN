@@ -13,6 +13,7 @@ from keras.utils import to_categorical
 import keras.backend as K
 
 import matplotlib.pyplot as plt
+from PIL import Image
 
 import numpy as np
 import sys
@@ -217,10 +218,13 @@ class INFOGAN():
             gen_imgs = self.generator.predict(gen_input)
             gen_imgs = 0.5 * gen_imgs + 0.5
             for j in range(r):
+                formatted = (gen_imgs[j,:,:] * 255 / np.max(gen_imgs[j,:,:])).astype('uint8')
+                im = Image.fromarray(formatted)
+                im.save("images/_" + str(j) + "%d.png" % epoch)
                 if (self.channels==1):
-                    axs[j,i].imshow(gen_imgs[j,:,:,0], cmap='gray')
+                    axs[j,i].imshow(gen_imgs[j,:,:], cmap='gray')
                 else:
-                    axs[j, i].imshow(gen_imgs[j, :, :, 0])
+                    axs[j, i].imshow(gen_imgs[j, :, :])
                 axs[j,i].axis('off')
         fig.savefig("images/%d.png" % epoch)
         plt.close()
