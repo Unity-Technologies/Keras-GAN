@@ -257,7 +257,7 @@ class INFOGAN():
         save(self.discriminator, "discriminator")
 
 
-if __name__ == '__main__':
+if __name__ == '__main__':    
     image_size, channels, classes = semantic_maps_shape()
     infogan = INFOGAN(image_size, channels, classes)
     infogan.train(epochs=50000, batch_size=32, sample_interval=50)
