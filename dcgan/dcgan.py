@@ -13,14 +13,19 @@ import matplotlib.pyplot as plt
 import sys
 
 import numpy as np
+sys.path.append('../unity')
+from unity import semantic_maps, semantic_maps_shape
+from unitymodel import UnityModel
 
-class DCGAN():
-    def __init__(self):
+class DCGAN(UnityModel):
+    def __init__(self, image_size, channels, num_classes):
+        UnityModel.__init__(self)
         # Input shape
-        self.img_rows = 28
-        self.img_cols = 28
-        self.channels = 1
+        self.img_rows = image_size
+        self.img_cols = image_size
+        self.channels = channels
         self.img_shape = (self.img_rows, self.img_cols, self.channels)
+        self.num_classes = num_classes
         self.latent_dim = 100
 
         optimizer = Adam(0.0002, 0.5)
@@ -52,9 +57,9 @@ class DCGAN():
     def build_generator(self):
 
         model = Sequential()
-
-        model.add(Dense(128 * 7 * 7, activation="relu", input_dim=self.latent_dim))
-        model.add(Reshape((7, 7, 128)))
+        mutiplier = int(self.img_cols / 4)
+        model.add(Dense(128 * mutiplier * mutiplier, activation="relu", input_dim=self.latent_dim))
+        model.add(Reshape((mutiplier, mutiplier, 128)))
         model.add(UpSampling2D())
         model.add(Conv2D(128, kernel_size=3, padding="same"))
         model.add(BatchNormalization(momentum=0.8))
@@ -106,11 +111,11 @@ class DCGAN():
     def train(self, epochs, batch_size=128, save_interval=50):
 
         # Load the dataset
-        (X_train, _), (_, _) = mnist.load_data()
+        (X_train, y_train), (_, _) = semantic_maps(resize=self.img_cols)
 
         # Rescale -1 to 1
-        X_train = X_train / 127.5 - 1.
-        X_train = np.expand_dims(X_train, axis=3)
+        X_train = (X_train.astype(np.float32) - 127.5) / 127.5
+        #X_train = np.expand_dims(X_train, axis=3)
 
         # Adversarial ground truths
         valid = np.ones((batch_size, 1))
@@ -148,26 +153,26 @@ class DCGAN():
             # If at save interval => save generated image samples
             if epoch % save_interval == 0:
                 self.save_imgs(epoch)
+        self.writer.close()
 
     def save_imgs(self, epoch):
-        r, c = 5, 5
+        r, c = 4, 4
         noise = np.random.normal(0, 1, (r * c, self.latent_dim))
         gen_imgs = self.generator.predict(noise)
-
         # Rescale images 0 - 1
         gen_imgs = 0.5 * gen_imgs + 0.5
-
-        fig, axs = plt.subplots(r, c)
         cnt = 0
+        images = list()
         for i in range(r):
             for j in range(c):
-                axs[i,j].imshow(gen_imgs[cnt, :,:,0], cmap='gray')
-                axs[i,j].axis('off')
+                images.append(np.transpose(gen_imgs[cnt,:,:], (2,0,1)))
+                #self.save_image("generated_" + str(cnt), gen_imgs[cnt,:,:], epoch)
                 cnt += 1
-        fig.savefig("images/mnist_%d.png" % epoch)
-        plt.close()
-
+        self.save_image("generated_", np.asarray(images), epoch)
 
 if __name__ == '__main__':
-    dcgan = DCGAN()
-    dcgan.train(epochs=4000, batch_size=32, save_interval=50)
+    image_size, channels, classes = semantic_maps_shape()
+    if (len(sys.argv)>1):
+        image_size = int(sys.argv[1])
+    dcgan = DCGAN(image_size, channels, 1)
+    dcgan.train(epochs=20000, batch_size=16, save_interval=50)
