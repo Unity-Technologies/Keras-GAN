@@ -150,7 +150,7 @@ class CGAN():
             # ---------------------
 
             # Condition on labels
-            sampled_labels = np.random.randint(0, 10, batch_size).reshape(-1, 1)
+            sampled_labels = np.random.randint(0, self.num_classes, batch_size).reshape(-1, 1)
 
             # Train the generator
             g_loss = self.combined.train_on_batch([noise, sampled_labels], valid)
